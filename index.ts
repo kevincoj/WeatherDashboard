@@ -7,7 +7,7 @@ import { getWeather, GeocodingError } from "./services/openweather";
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
