@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weather Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; color: #333; display: flex; justify-content: center; padding: 40px 16px; }
+    .container { max-width: 520px; width: 100%; }
+    h1 { text-align: center; margin-bottom: 24px; }
+    .search { display: flex; gap: 8px; margin-bottom: 24px; }
+    .search input { flex: 1; padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; }
+    .search button { padding: 10px 20px; font-size: 16px; border: none; border-radius: 6px; background: #3b82f6; color: #fff; cursor: pointer; }
+    .search button:hover { background: #2563eb; }
+    .card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 16px; }
+    .current { text-align: center; }
+    .current .temp { font-size: 48px; font-weight: bold; }
+    .current .details { margin-top: 8px; color: #666; }
+    .forecast { display: flex; justify-content: space-between; text-align: center; }
+    .forecast .day { flex: 1; }
+    .forecast .day span { display: block; }
+    .hidden { display: none; }
+    .error { color: #dc2626; text-align: center; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Weather Dashboard</h1>
+
+    <div class="search">
+      <input type="text" id="city" placeholder="Enter city name…" />
+      <button id="searchBtn">Search</button>
+    </div>
+
+    <div id="error" class="error hidden"></div>
+
+    <div id="results" class="hidden">
+      <div class="card current">
+        <h2 id="cityName"></h2>
+        <div class="temp"><span id="temp"></span>&deg;C</div>
+        <div class="details">
+          <span id="condition"></span> &middot; Humidity: <span id="humidity"></span>%
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-bottom:12px;">5-Day Forecast</h3>
+        <div class="forecast" id="forecast"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const cityInput = document.getElementById("city");
+    const searchBtn = document.getElementById("searchBtn");
+    const results   = document.getElementById("results");
+    const errorDiv  = document.getElementById("error");
+
+    async function fetchWeather() {
+      const city = cityInput.value.trim();
+      if (!city) return;
+
+      errorDiv.classList.add("hidden");
+      results.classList.add("hidden");
+
+      try {
+        const res  = await fetch("/api/weather?city=" + encodeURIComponent(city));
+        const data = await res.json();
+
+        document.getElementById("cityName").textContent  = data.city;
+        document.getElementById("temp").textContent      = data.temperature;
+        document.getElementById("condition").textContent  = data.condition;
+        document.getElementById("humidity").textContent   = data.humidity;
+
+        const forecastEl = document.getElementById("forecast");
+        forecastEl.innerHTML = data.forecast
+          .map(d => `<div class="day"><span><strong>${d.day}</strong></span><span>${d.high}&deg; / ${d.low}&deg;</span><span>${d.condition}</span></div>`)
+          .join("");
+
+        results.classList.remove("hidden");
+      } catch (err) {
+        errorDiv.textContent = "Failed to fetch weather data.";
+        errorDiv.classList.remove("hidden");
+      }
+    }
+
+    searchBtn.addEventListener("click", fetchWeather);
+    cityInput.addEventListener("keydown", e => { if (e.key === "Enter") fetchWeather(); });
+  </script>
+</body>
+</html>
