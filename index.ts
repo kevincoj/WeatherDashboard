@@ -1,5 +1,9 @@
 import express, { Request, Response } from "express";
 import path from "path";
+import dotenv from "dotenv";
+import { getWeatherForCity } from "./services/weatherService";
+
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -11,27 +15,32 @@ app.get("/", (_req: Request, res: Response) => {
   res.render("index");
 });
 
-// TODO: Replace this mock endpoint with a real weather API.
-// The response shape should stay the same so the frontend keeps working.
-app.get("/api/weather", (req: Request, res: Response) => {
-  const city = (req.query.city as string) || "Unknown";
+app.get("/api/weather", async (req: Request, res: Response) => {
+  const city = (req.query.city as string) || "";
 
-  // TODO: Fetch real weather data for `city` from an external provider.
-  const mockData = {
-    city,
-    temperature: 22,
-    condition: "Partly Cloudy",
-    humidity: 55,
-    forecast: [
-      { day: "Mon", high: 24, low: 16, condition: "Sunny" },
-      { day: "Tue", high: 21, low: 14, condition: "Cloudy" },
-      { day: "Wed", high: 19, low: 13, condition: "Rain" },
-      { day: "Thu", high: 23, low: 15, condition: "Sunny" },
-      { day: "Fri", high: 25, low: 17, condition: "Partly Cloudy" },
-    ],
-  };
+  if (!city) {
+    res.status(400).json({ error: "Missing city query parameter" });
+    return;
+  }
 
-  res.json(mockData);
+  try {
+    const weather = await getWeatherForCity(city);
+    res.json(weather);
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "Unknown error";
+    console.error("Error fetching weather data:", message);
+
+    if (message.includes("not found")) {
+      res.status(404).json({ error: message });
+      return;
+    }
+    if (message.includes("not configured")) {
+      res.status(500).json({ error: "OpenWeather API key not configured" });
+      return;
+    }
+    res.status(500).json({ error: "Failed to fetch weather data" });
+  }
 });
 
 app.listen(PORT, () => {
