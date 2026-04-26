@@ -1,5 +1,10 @@
 import express, { Request, Response } from "express";
 import path from "path";
+import dotenv from "dotenv";
+import axios from "axios";
+import { getWeather, GeocodingError } from "./services/openweather";
+
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -11,27 +16,35 @@ app.get("/", (_req: Request, res: Response) => {
   res.render("index");
 });
 
-// TODO: Replace this mock endpoint with a real weather API.
-// The response shape should stay the same so the frontend keeps working.
-app.get("/api/weather", (req: Request, res: Response) => {
-  const city = (req.query.city as string) || "Unknown";
+app.get("/api/weather", async (req: Request, res: Response) => {
+  const city = (req.query.city as string) || "";
 
-  // TODO: Fetch real weather data for `city` from an external provider.
-  const mockData = {
-    city,
-    temperature: 22,
-    condition: "Partly Cloudy",
-    humidity: 55,
-    forecast: [
-      { day: "Mon", high: 24, low: 16, condition: "Sunny" },
-      { day: "Tue", high: 21, low: 14, condition: "Cloudy" },
-      { day: "Wed", high: 19, low: 13, condition: "Rain" },
-      { day: "Thu", high: 23, low: 15, condition: "Sunny" },
-      { day: "Fri", high: 25, low: 17, condition: "Partly Cloudy" },
-    ],
-  };
+  if (!city) {
+    res.status(400).json({ error: "Missing required query parameter: city" });
+    return;
+  }
 
-  res.json(mockData);
+  try {
+    const weather = await getWeather(city);
+    res.json(weather);
+  } catch (error: unknown) {
+    if (error instanceof GeocodingError) {
+      res.status(404).json({ error: error.message });
+      return;
+    }
+
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status || 500;
+      const message =
+        error.response?.data?.message || "Failed to fetch weather data";
+      console.error("OpenWeather API error:", error.response?.data || error.message);
+      res.status(status).json({ error: message });
+      return;
+    }
+
+    console.error("Unexpected error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 app.listen(PORT, () => {
