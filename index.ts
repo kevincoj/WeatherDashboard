@@ -34,10 +34,11 @@ app.get("/api/weather", async (req: Request, res: Response) => {
     }
 
     if (axios.isAxiosError(error)) {
-      const status = error.response?.status || 500;
+      const axiosError = error as any;
+      const status = axiosError.response?.status || 500;
       const message =
-        error.response?.data?.message || "Failed to fetch weather data";
-      console.error("OpenWeather API error:", error.response?.data || error.message);
+        axiosError.response?.data?.message || "Failed to fetch weather data";
+      console.error("OpenWeather API error:", axiosError.response?.data || axiosError.message);
       res.status(status).json({ error: message });
       return;
     }
